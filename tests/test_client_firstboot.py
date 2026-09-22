@@ -34,6 +34,17 @@ class _FakeLogger:
 
 
 class EnsureKernelDhcpResolverTests(unittest.TestCase):
+    def test_uses_initramfs_dhcp_when_kernel_dhcp_data_is_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "etc").mkdir()
+            fallback = root / "run/ha-pxe-initramfs/resolv.conf"
+            fallback.parent.mkdir(parents=True)
+            fallback.write_text("search home.example\nnameserver 192.0.2.1\n")
+            ensure_kernel_dhcp_resolver(_FakeLogger(), root=root)
+            self.assertIn("nameserver 192.0.2.1", (root / "etc/resolv.conf").read_text())
+            self.assertIn("search home.example", (root / "etc/resolv.conf").read_text())
+
     def test_ensure_kernel_dhcp_resolver_writes_resolv_conf_from_proc_net_pnp(self) -> None:
         logger = _FakeLogger()
 

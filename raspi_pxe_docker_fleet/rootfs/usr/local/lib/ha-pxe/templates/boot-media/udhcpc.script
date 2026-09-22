@@ -1,0 +1,19 @@
+#!/bin/sh
+case "$1" in
+    deconfig)
+        ip addr flush dev "$interface"
+        ;;
+    bound|renew)
+        ifconfig "$interface" "$ip" netmask "${subnet:-255.255.255.0}" up
+        ip route del default dev "$interface" 2>/dev/null || true
+        for gateway in $router; do
+            ip route add default via "$gateway" dev "$interface" && break
+        done
+        : > /etc/resolv.conf
+        for address in $dns; do
+            echo "nameserver $address" >> /etc/resolv.conf
+        done
+        [ -z "$domain" ] || echo "search $domain" >> /etc/resolv.conf
+        ;;
+esac
+exit 0

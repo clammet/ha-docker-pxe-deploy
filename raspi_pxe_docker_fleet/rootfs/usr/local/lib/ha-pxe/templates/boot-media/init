@@ -1,0 +1,56 @@
+#!/bin/sh
+# PID 1 in the RAM filesystem. The physical SD card is never mounted.
+export PATH=/bin
+/bin/busybox --install -s /bin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+exec </dev/console >/dev/console 2>&1
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /run
+. /etc/pxe.conf
+
+# Some are built into the kernel; absence as a module is therefore normal.
+for module in $(cat /etc/pxe.modules); do
+    modprobe "$module" 2>/dev/null || true
+done
+
+while true; do
+    iface=
+    for candidate in /sys/class/net/*; do
+        [ "${candidate##*/}" = lo ] && continue
+        iface=${candidate##*/}
+        break
+    done
+    if [ -z "$iface" ]; then
+        echo 'HA-PXE: waiting for the Ethernet driver'
+        sleep 10
+        continue
+    fi
+    ip link set "$iface" up
+    echo "HA-PXE: obtaining an address on $iface"
+    if udhcpc -i "$iface" -n -q -t 5 -T 4 -s /etc/udhcpc.script; then
+        echo "HA-PXE: mounting $PXE_SERVER:$PXE_ROOT"
+        if timeout -s KILL 60 mount -t nfs -o rw,vers=3,tcp,nolock \
+            "$PXE_SERVER:$PXE_ROOT" /newroot; then
+            # init may be an absolute symlink that only resolves after switch_root.
+            if [ -x /newroot/usr/lib/systemd/systemd ] || [ -x /newroot/lib/systemd/systemd ] || [ -x /newroot/sbin/init ]; then
+                mkdir -p /newroot/dev /newroot/proc /newroot/sys /newroot/run
+                # Supply DHCP DNS data to the add-on's first-boot scripts.
+                mkdir -p /run/ha-pxe-initramfs
+                cp /etc/resolv.conf /run/ha-pxe-initramfs/resolv.conf
+                mount --move /dev /newroot/dev
+                mount --move /proc /newroot/proc
+                mount --move /sys /newroot/sys
+                mount --move /run /newroot/run
+                echo 'HA-PXE: starting the NFS-root operating system'
+                exec switch_root /newroot /sbin/init
+            fi
+            echo 'HA-PXE: root export has no usable init; waiting for provisioning'
+            umount /newroot
+        fi
+    fi
+    echo 'HA-PXE: network/root unavailable; retrying in 10 seconds'
+    sleep 10
+done

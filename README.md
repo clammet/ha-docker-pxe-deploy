@@ -20,7 +20,15 @@ The add-on prepares Raspberry Pi network-boot clients by:
 4. Configure at least one Raspberry Pi client plus a login method.
 5. Point your DHCP or ProxyDHCP service at the Home Assistant host for TFTP.
 
+For SD-assisted boot with retries while HAOS starts, see
+[`boot-media/README.md`](boot-media/README.md). It includes U-Boot builds for
+Pi 2B, Pi 3B and Pi 3B+, standalone SD preparation and flashing on macOS/Linux,
+automatic matching network payload generation by HA, and client updates to
+redundant SD boot-instruction slots. No running HA host or manual payload
+publication is needed to prepare a card.
+
 ## Devcontainer Harness
+
 
 This repository now includes a Home Assistant add-on development harness built
 around the official Home Assistant `apps` devcontainer.

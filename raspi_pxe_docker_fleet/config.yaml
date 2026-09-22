@@ -1,5 +1,5 @@
 name: Raspberry Pi PXE Docker Fleet
-version: "1.0.0"
+version: "1.1.0"
 slug: raspi_pxe_docker_fleet
 description: Provision Raspberry Pi PXE clients with per-client NFS roots and Docker workloads.
 url: https://github.com/Clam-/ha-docker-pxe-deploy

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from .addon_context import AddonContext
+from .boot_payload import provision_boot_media
 from .container_specs import normalize_container_specs, specs_to_json
 from .envfile import format_env_file
 from .errors import HaPxeError
@@ -167,6 +168,7 @@ def provision_client(context: AddonContext, client: dict[str, object], server_ip
     _log_stage(context, "info", serial, "bootstrap", "started", "Installing first-boot and container-sync bootstrap assets")
     _disable_stock_firstboot_services(root_dir)
     _write_bootstrap_files(context, root_dir, client, serial, hostname, server_ip, specs_to_json(containers))
+    provision_boot_media(context, boot_dir, root_dir, model, arch, serial, server_ip)
     _log_stage(context, "info", serial, "bootstrap", "completed", "Bootstrap scripts, services, and transport settings installed")
 
     _log_stage(context, "info", serial, "nfs", "started", "Registering per-client NFS exports")
@@ -477,6 +479,10 @@ def _write_bootstrap_files(
     ensure_directory(root_dir / "var" / "lib" / "ha-pxe")
 
     templates = context.paths.templates_dir
+    for name in ("ha-pxe-boot-update.service", "ha-pxe-boot-update.timer"):
+        copy_file(templates / name, root_dir / "etc/systemd/system" / name, 0o644)
+    replace_symlink(root_dir / "etc/systemd/system/timers.target.wants/ha-pxe-boot-update.timer",
+                    "../ha-pxe-boot-update.timer")
     copy_file(templates / "ha-pxe-firstboot.service", root_dir / "etc" / "systemd" / "system" / "ha-pxe-firstboot.service", 0o644)
     copy_file(templates / "ha-pxe-early-log.service", root_dir / "etc" / "systemd" / "system" / "ha-pxe-early-log.service", 0o644)
     copy_file(

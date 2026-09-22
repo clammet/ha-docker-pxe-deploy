@@ -1,0 +1,11 @@
+[Unit]
+Description=Update HA-PXE SD boot instructions in the inactive slot
+RequiresMountsFor=/boot/firmware
+After=network-online.target
+ConditionKernelCommandLine=ha_pxe.media=1
+
+[Service]
+Type=oneshot
+Environment=PYTHONPATH=/usr/local/lib/ha-pxe
+ExecStart=/usr/bin/python3 -m ha_pxe.client.boot_update
+TimeoutStartSec=120

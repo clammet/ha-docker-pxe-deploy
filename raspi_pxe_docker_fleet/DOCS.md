@@ -403,3 +403,21 @@ Recommended update patterns:
 - Managed boot config entries are written into the exported boot partition's main `config.txt`, not an included fragment, so custom settings remain available from both TFTP boot and the later `/boot/firmware` NFS mount.
 - Raspberry Pi 2 v1.2, Pi 3, and CM3-class network boot first request `/bootcode.bin` from the TFTP root, then typically probe `/bootsig.bin`.
 - Raspberry Pi 4, 400, CM4, Pi 5, 500, and CM5 use the EEPROM bootloader instead of `bootcode.bin`.
+
+## SD boot with retries and automatic instruction updates
+
+The repository's [standalone SD tools](../boot-media/README.md) support Pi 2B,
+3B and 3B+. They prepare and flash media without access to HA. The add-on now
+generates matching kernel/initramfs payloads for Pi 2 (`armhf`) and Pi 3
+(`arm64`, including 3B+) during provisioning; no manual upload is required.
+
+A timer on clients booted with this media checks for updated boot instructions
+and writes only an inactive SD slot when they change. The initial firmware,
+U-Boot and recovery files remain untouched. Updates take effect on the next
+normal reboot. The SD's firmware configuration and overlays are not updated by
+this mechanism; see the tool's limits before using custom hardware overlays.
+
+New deployments and explicit rebuilds resolve the latest OS image. Existing
+root filesystems are retained on restart; this does not automatically upgrade
+or replace an installed OS. Ordinary network-boot clients' SD devices are never
+modified. View client update results with `journalctl -u ha-pxe-boot-update`.

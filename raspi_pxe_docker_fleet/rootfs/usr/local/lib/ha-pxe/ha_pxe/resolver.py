@@ -64,7 +64,7 @@ def read_kernel_dhcp_resolver_config(path: Path | None = None) -> ResolverConfig
     try:
         lines = pnp_path.read_text(encoding="utf-8").splitlines()
     except OSError:
-        return ResolverConfig(nameservers=[], search_domains=[])
+        lines = []
 
     nameservers: list[str] = []
     search_domains: list[str] = []
@@ -84,6 +84,13 @@ def read_kernel_dhcp_resolver_config(path: Path | None = None) -> ResolverConfig
             if domain and domain not in search_domains:
                 search_domains.append(domain)
 
+    if not nameservers:
+        # boot-media's recovery initramfs runs udhcpc before switching to NFS.
+        # Its /run tmpfs survives switch_root; it does not populate /proc/net/pnp.
+        fallback = pnp_path.absolute().parents[2] / "run/ha-pxe-initramfs/resolv.conf"
+        nameservers = read_resolv_nameservers(fallback)
+        if nameservers:
+            search_domains = read_resolv_search_domains(fallback)
     return ResolverConfig(nameservers=nameservers, search_domains=search_domains)
 
 

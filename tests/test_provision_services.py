@@ -162,6 +162,13 @@ class WriteBootstrapFilesTests(unittest.TestCase):
             enabled_service = root_dir / "etc" / "systemd" / "system" / "multi-user.target.wants" / "ha-pxe-command-listener.service"
             self.assertTrue(enabled_service.is_symlink())
             self.assertEqual(enabled_service.readlink(), Path("../ha-pxe-command-listener.service"))
+            updater = root_dir / "etc/systemd/system/ha-pxe-boot-update.service"
+            self.assertIn("ConditionKernelCommandLine=ha_pxe.media=1", updater.read_text())
+            self.assertIn("RequiresMountsFor=/boot/firmware", updater.read_text())
+            self.assertEqual(
+                (root_dir / "etc/systemd/system/timers.target.wants/ha-pxe-boot-update.timer").readlink(),
+                Path("../ha-pxe-boot-update.timer"),
+            )
 
 
 if __name__ == "__main__":
